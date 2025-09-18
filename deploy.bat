@@ -10,6 +10,9 @@ if "%GITHUB_TOKEN%"=="" (
     echo [错误] 未找到 GITHUB_TOKEN 环境变量
     echo 请设置 GITHUB_TOKEN 环境变量或使用以下命令：
     echo set GITHUB_TOKEN=您的Token
+    echo.
+    echo 或者，您可以选择手动创建 GitHub Release
+    call :manual_release_instructions
     pause
     exit /b 1
 )
@@ -161,17 +164,40 @@ if not exist "versions.json" (
 :: 使用 PowerShell 更新 JSON 文件
 powershell -Command "
 $json = Get-Content -Path 'versions.json' -Raw | ConvertFrom-Json
+
+# 检查并修复版本号格式
+foreach ($v in $json.versions) {
+    if ($v.version -eq '1.10') {
+        $v.version = '1.10'
+    }
+}
+
+# 添加新版本
 $newVersion = @{ 
     'version' = '!NEW_VERSION!'; 
-    'releaseDate' = Get-Date -Format 'yyyy-MM-dd'; 
-    'releaseNotes' = 'releases/v!NEW_VERSION!/release_notes_v!NEW_VERSION!.txt';
-    'downloadUrl' = 'https://github.com/ladyicefox/AutoExportTool-Releases/releases/download/v!NEW_VERSION!/AutoExportTool_Pro_V!NEW_VERSION!.ms'
+    'release_date' = Get-Date -Format 'yyyy-MM-dd'; 
+    'release_notes' = 'releases/v!NEW_VERSION!/release_notes_v!NEW_VERSION!.txt';
+    'download_url' = 'https://github.com/ladyicefox/AutoExportTool-Releases/releases/download/v!NEW_VERSION!/AutoExportTool_Pro_V!NEW_VERSION!.ms'
 }
+
 if ($json.versions -eq $null) { $json | Add-Member -Name 'versions' -Value @() -MemberType NoteProperty }
 $json.versions = @($json.versions | Where-Object { $_.version -ne '!NEW_VERSION!' })
 $json.versions += $newVersion
+
+# 按版本号排序（确保1.10在1.09之后）
 $json.versions = $json.versions | Sort-Object { [version]$_.version } -Descending
+
+# 更新最新版本号
 $json | Add-Member -Name 'latest_version' -Value '!NEW_VERSION!' -MemberType NoteProperty -Force
+
+# 确保1.10是最新版本（如果存在）
+foreach ($v in $json.versions) {
+    if ($v.version -eq '1.10') {
+        $json.latest_version = '1.10'
+        break
+    }
+}
+
 $json | ConvertTo-Json -Depth 10 | Set-Content -Path 'versions.json'
 "
 
@@ -225,6 +251,7 @@ curl -s -X POST -H "Authorization: token %GITHUB_TOKEN%" ^
 
 if !errorlevel! neq 0 (
     echo [警告] 使用API创建Release失败，请手动创建
+    call :manual_release_instructions
 )
 
 :: 上传文件到Release
@@ -241,6 +268,14 @@ if defined UPLOAD_URL (
         -H "Content-Type: application/octet-stream" ^
         --data-binary "@releases\v!NEW_VERSION!\AutoExportTool_Pro_V!NEW_VERSION!.ms" ^
         "!UPLOAD_URL!?name=AutoExportTool_Pro_V!NEW_VERSION!.ms"
+    
+    if !errorlevel! neq 0 (
+        echo [警告] 上传文件失败，请手动上传
+        call :manual_upload_instructions
+    )
+) else (
+    echo [警告] 无法获取上传URL，请手动上传
+    call :manual_upload_instructions
 )
 
 echo ===== 发布完成 =====
@@ -252,3 +287,30 @@ echo.
 start "" "https://github.com/ladyicefox/AutoExportTool-Releases/releases/tag/v!NEW_VERSION!"
 
 pause
+exit /b 0
+
+:manual_release_instructions
+echo.
+echo ===== 手动创建 GitHub Release 步骤 =====
+echo 1. 访问 GitHub 仓库: https://github.com/ladyicefox/AutoExportTool-Releases
+echo 2. 点击右侧的 "Releases" 选项卡
+echo 3. 点击 "Draft a new release" 按钮
+echo 4. 选择标签: 输入 v!NEW_VERSION! (如果不存在，选择 "Create new tag: v!NEW_VERSION!")
+echo 5. 填写标题: 输入 v!NEW_VERSION!
+echo 6. 添加描述: 从 releases\v!NEW_VERSION!\release_notes_v!NEW_VERSION!.txt 文件中复制内容
+echo 7. 上传文件: 将 releases\v!NEW_VERSION!\AutoExportTool_Pro_V!NEW_VERSION!.ms 拖放到上传区域
+echo 8. 点击 "Publish release" 按钮完成发布
+echo.
+echo 完成后，请确保 versions.json 文件中的 latest_version 字段设置为 !NEW_VERSION!
+echo.
+exit /b 0
+
+:manual_upload_instructions
+echo.
+echo ===== 手动上传文件到 GitHub Release 步骤 =====
+echo 1. 访问已创建的 Release 页面: https://github.com/ladyicefox/AutoExportTool-Releases/releases/tag/v!NEW_VERSION!
+echo 2. 点击 "Edit release" 按钮
+echo 3. 将 releases\v!NEW_VERSION!\AutoExportTool_Pro_V!NEW_VERSION!.ms 拖放到上传区域
+echo 4. 点击 "Update release" 按钮完成上传
+echo.
+exit /b 0
