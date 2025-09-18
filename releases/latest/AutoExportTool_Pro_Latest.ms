@@ -32,7 +32,7 @@
         --flushListener()
     --)
 --)
---版本记录 V1.0;V1.01；V1.02 ,V1.02-1/ V1.03；V1.03-1 ；V1.04..V1.04-1 ;V1.05,V1.05-1；V1.06，V1.06-1；V1.07，V1.07-1；V1.08
+--版本记录 V1.0;V1.01；V1.02 ,V1.02-1/ V1.03；V1.03-1 ；V1.04..V1.04-1 ;V1.05,V1.05-1；V1.06，V1.06-1；V1.07，V1.07-1；V1.08 ； V1.09 ；V1.10
 -- ===== 在脚本开头定义全局变量 =====
 -- 初始化管理器//FBX属性初始化-------------------------------------
 FbxExporterSetParam "ResetExport"         -- 重置FBX导出设置
@@ -40,7 +40,7 @@ FbxExporterSetParam "ResetExport"         -- 重置FBX导出设置
 -- 全局变量定义 / 批量合并列表的公共挂点文件 目标 到 列表的 所有文件和文件夹内的所有文件，合并文件内所有以及选择集，挂点各自对齐链接到对应的目标骨骼并保存新文件覆盖到目标文件夹
 ----------------------------------------------------------------AutoExportTool_Pro.
 -- 版本信息 / 热更正式版本 AutoExportTool_Pro / 全局
-global g_currentVersion = "1.09"
+global g_currentVersion = "1.10"
 global g_latestVersion = g_currentVersion
 global g_updateAvailable = false 
 global g_githubRepo = "https://api.github.com/repos/ladyicefox/AutoExportTool-Releases/releases/latest"
@@ -2639,7 +2639,7 @@ rollout AutoExportTool_Pro "AutoExportTool_Pro" width:500 height:1050 -- width--
     -- 进度条控件 ---------------------------------------------------------
     dotNetControl pbProgress "System.Windows.Forms.ProgressBar" width:470 height:20 offset:[0,5]
 	label lblProgressInfo "♏准备就绪..." align:#center offset:[0,5] color:(color 200 100 0)
-    hyperLink lbl_01 "(•◡•)ꦿ๊🍁ღ͜ ོYQiu_🧰AutoExportToolo-V1.09؄♓╰☆╮" \
+    hyperLink lbl_01 "(•◡•)ꦿ๊🍁ღ͜ ོYQiu_🧰AutoExportToolo-V1.10؄♓╰☆╮" \
     align:#Center \
     offset:[10,0] \
     color:(color 323 178 223) \  -- 主色调 (赛博蓝)
@@ -8397,7 +8397,7 @@ on AutoExportTool_Pro rbuttonup pos do (
     -- 检测更新菜单项（放在最前面）
     local updateText = if g_updateAvailable then "🔄 检测更新 NEW❗ |【CheckUpdate】" else "🔄 检测更新 |【CheckUpdate】"
     local updateItem = contextMenu.Items.Add(updateText)
-    updateItem.Image = (dotNetClass "System.Drawing.SystemIcons").Information.ToBitmap()
+    updateItem.Image = (dotNetClass "System.Drawing.SystemIcons").WinLogo.ToBitmap()
     dotNet.addEventHandler updateItem "Click" (fn s e = 
         checkForUpdates()
     )
@@ -8419,7 +8419,7 @@ dotNet.addEventHandler autoUpdateItem "Click" (fn s e = (
     
     -- 帮助菜单
     local helpItem = contextMenu.Items.Add("帮助 |【Help】")
-    helpItem.Image = (dotNetClass "System.Drawing.SystemIcons").Application.ToBitmap()
+    helpItem.Image = (dotNetClass "System.Drawing.SystemIcons").Question.ToBitmap()
     
     -- 帮助子菜单
     local helpSubMenu = dotNetObject "System.Windows.Forms.ContextMenuStrip"
@@ -8474,9 +8474,9 @@ dotNet.addEventHandler autoUpdateItem "Click" (fn s e = (
 
     -- 添加状态图标
     if g_toolbarAdded then (
-        toolbarItem.Image = (dotNetClass "System.Drawing.SystemIcons").Information.ToBitmap()
+        toolbarItem.Image = (dotNetClass "System.Drawing.SystemIcons").Shield.ToBitmap()
     ) else (
-        toolbarItem.Image = (dotNetClass "System.Drawing.SystemIcons").Exclamation.ToBitmap()
+        toolbarItem.Image = (dotNetClass "System.Drawing.SystemIcons").Warning.ToBitmap()
     )
 
     -- 工具栏点击处理函数
@@ -8506,9 +8506,9 @@ dotNet.addEventHandler autoUpdateItem "Click" (fn s e = (
         -- 更新勾选状态和图标
         sender.Checked = g_toolbarAdded
         if g_toolbarAdded then (
-            sender.Image = (dotNetClass "System.Drawing.SystemIcons").Information.ToBitmap()
+            sender.Image = (dotNetClass "System.Drawing.SystemIcons").Shield.ToBitmap()
         ) else (
-            sender.Image = (dotNetClass "System.Drawing.SystemIcons").Exclamation.ToBitmap()
+            sender.Image = (dotNetClass "System.Drawing.SystemIcons").Warning.ToBitmap()
         )
     )
     
@@ -8520,31 +8520,32 @@ dotNet.addEventHandler autoUpdateItem "Click" (fn s e = (
     
     -- 添加重启插件项
     local restartItem = contextMenu.Items.Add("🔄​​​​ 重启插件 |【Auto-RSTool】")
-    restartItem.Image = (dotNetClass "System.Drawing.SystemIcons").Shield.ToBitmap()
+    restartItem.Image = (dotNetClass "System.Drawing.SystemIcons").Information.ToBitmap()
     dotNet.addEventHandler restartItem "Click" (fn s e = (
         try (destroyDialog AutoExportTool_Pro) catch()
         fileIn (getSourceFileName())
         createDialog AutoExportTool_Pro
     ))
- 
-    -- 分隔符
-    contextMenu.Items.Add((dotNetObject "System.Windows.Forms.ToolStripSeparator"))
-        
-    -- 关于菜单项
-    local aboutItem = contextMenu.Items.Add("ℹ️ 关于")
-    aboutItem.Image = (dotNetClass "System.Drawing.SystemIcons").Exclamation.ToBitmap()
-    dotNet.addEventHandler aboutItem "Click" (fn s e = 
-        messageBox ("AutoExportTool Pro\n版本: v" + g_currentVersion + "\n作者: 叶秋") title:"关于"
-    )
+    
     
     -- 分隔符
     contextMenu.Items.Add((dotNetObject "System.Windows.Forms.ToolStripSeparator"))
+    
     
     -- 关闭菜单
     local closeItem = contextMenu.Items.Add("📛 关闭工具 |【CloseTool】")
     closeItem.Image = (dotNetClass "System.Drawing.SystemIcons").Error.ToBitmap()
     dotNet.addEventHandler closeItem "Click" (fn s e = 
         try (destroyDialog AutoExportTool_Pro) catch()
+    )
+    -- 分隔符
+    contextMenu.Items.Add((dotNetObject "System.Windows.Forms.ToolStripSeparator"))
+        
+    -- 关于菜单项
+    local aboutItem = contextMenu.Items.Add("ℹ️ 关于")
+    aboutItem.Image = (dotNetClass "System.Drawing.SystemIcons").Information.ToBitmap()
+    dotNet.addEventHandler aboutItem "Click" (fn s e = 
+        messageBox ("AutoExportTool Pro\n版本: v" + g_currentVersion + "\n作者: 叶秋") title:"关于"
     )
     
     -- 显示菜单
