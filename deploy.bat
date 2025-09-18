@@ -204,73 +204,44 @@ if !errorlevel! neq 0 (
     exit /b 1
 )
 
-:: 等待 GitHub 同步标签
-echo [等待] 等待 GitHub 同步标签 (5秒)...
-timeout /t 5 /nobreak >nul
-
 :: 创建GitHub Release
 echo [发布] 创建 GitHub Release...
 
-:: 读取发布说明内容
-set "RELEASE_NOTES_FILE=releases\v!NEW_VERSION!\release_notes_v!NEW_VERSION!.txt"
-set "RELEASE_BODY="
-for /f "usebackq tokens=*" %%i in ("%RELEASE_NOTES_FILE%") do (
+:: 使用curl创建Release
+set RELEASE_NOTES=releases\v!NEW_VERSION!\release_notes_v!NEW_VERSION!.txt
+set RELEASE_BODY=
+
+for /f "usebackq delims=" %%i in ("!RELEASE_NOTES!") do (
     set "line=%%i"
     set "line=!line:"=\"!"
     set "line=!line:\=\\!"
     set "RELEASE_BODY=!RELEASE_BODY!!line!\n"
 )
 
-:: 创建 JSON 数据文件
-echo {^"tag_name^": ^"v!NEW_VERSION!^", ^"name^": ^"v!NEW_VERSION!^", ^"body^": ^"!RELEASE_BODY!^", ^"draft^": false, ^"prerelease^": false} > release_data.json
-
-:: 创建 Release
-curl -s -o release_response.json -X POST -H "Authorization: token %GITHUB_TOKEN%" ^
+curl -s -X POST -H "Authorization: token %GITHUB_TOKEN%" ^
     -H "Content-Type: application/json" ^
-    --data-binary "@release_data.json" ^
+    -d "{\"tag_name\": \"v!NEW_VERSION!\", \"name\": \"v!NEW_VERSION!\", \"body\": \"!RELEASE_BODY!\", \"draft\": false, \"prerelease\": false}" ^
     "https://api.github.com/repos/ladyicefox/AutoExportTool-Releases/releases"
 
-:: 检查 Release 是否创建成功
-for /f "tokens=*" %%i in ('type release_response.json ^| findstr /i "message"') do (
-    echo [错误] 创建 Release 失败: %%i
-    echo 请检查 release_response.json 文件获取详细信息
-    goto :release_failed
+if !errorlevel! neq 0 (
+    echo [警告] 使用API创建Release失败，请手动创建
 )
 
-:: 获取上传 URL
-for /f "tokens=2 delims=:" %%i in ('type release_response.json ^| findstr "upload_url"') do (
+:: 上传文件到Release
+echo [上传] 上传文件到GitHub Release...
+for /f "tokens=2 delims=:" %%i in ('curl -s -H "Authorization: token %GITHUB_TOKEN%" "https://api.github.com/repos/ladyicefox/AutoExportTool-Releases/releases/tags/v!NEW_VERSION!" ^| findstr "upload_url"') do (
     set "UPLOAD_URL=%%i"
     set "UPLOAD_URL=!UPLOAD_URL:"=!"
     set "UPLOAD_URL=!UPLOAD_URL:{%?}=!"
     set "UPLOAD_URL=!UPLOAD_URL: =!"
 )
 
-if not defined UPLOAD_URL (
-    echo [错误] 无法获取上传 URL
-    type release_response.json
-    goto :release_failed
+if defined UPLOAD_URL (
+    curl -s -X POST -H "Authorization: token %GITHUB_TOKEN%" ^
+        -H "Content-Type: application/octet-stream" ^
+        --data-binary "@releases\v!NEW_VERSION!\AutoExportTool_Pro_V!NEW_VERSION!.ms" ^
+        "!UPLOAD_URL!?name=AutoExportTool_Pro_V!NEW_VERSION!.ms"
 )
-
-:: 上传文件到 Release
-echo [上传] 上传文件到 GitHub Release...
-curl -s -o upload_response.json -X POST -H "Authorization: token %GITHUB_TOKEN%" ^
-    -H "Content-Type: application/octet-stream" ^
-    --data-binary "@releases\v!NEW_VERSION!\AutoExportTool_Pro_V!NEW_VERSION!.ms" ^
-    "!UPLOAD_URL!?name=AutoExportTool_Pro_V!NEW_VERSION!.ms"
-
-:: 检查上传是否成功
-for /f "tokens=*" %%i in ('type upload_response.json ^| findstr /i "error message"') do (
-    echo [错误] 上传文件失败: %%i
-    echo 请检查 upload_response.json 文件获取详细信息
-    goto :release_failed
-)
-
-echo [成功] 文件上传成功!
-
-:: 清理临时文件
-del release_data.json >nul 2>&1
-del release_response.json >nul 2>&1
-del upload_response.json >nul 2>&1
 
 echo ===== 发布完成 =====
 echo [版本] v!NEW_VERSION! 已发布
@@ -281,9 +252,3 @@ echo.
 start "" "https://github.com/ladyicefox/AutoExportTool-Releases/releases/tag/v!NEW_VERSION!"
 
 pause
-exit /b 0
-
-:release_failed
-echo [错误] Release 创建或上传失败，请检查网络连接和 GitHub Token 权限
-pause
-exit /b 1
