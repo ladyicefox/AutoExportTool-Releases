@@ -32,7 +32,7 @@
         --flushListener()
     --)
 --)
---版本记录 V1.0;V1.01；V1.02 ,V1.02-1/ V1.03；V1.03-1 ；V1.04..V1.04-1 ;V1.05,V1.05-1；V1.06，V1.06-1；V1.07，V1.07-1；V1.08 ； V1.09 ；V1.10
+--版本记录 V1.0;V1.01；V1.02 ,V1.02-1/ V1.03；V1.03-1 ；V1.04..V1.04-1 ;V1.05,V1.05-1；V1.06，V1.06-1；V1.07，V1.07-1；V1.08 ； V1.09 ；
 -- ===== 在脚本开头定义全局变量 =====
 -- 初始化管理器//FBX属性初始化-------------------------------------
 FbxExporterSetParam "ResetExport"         -- 重置FBX导出设置
@@ -40,7 +40,7 @@ FbxExporterSetParam "ResetExport"         -- 重置FBX导出设置
 -- 全局变量定义 / 批量合并列表的公共挂点文件 目标 到 列表的 所有文件和文件夹内的所有文件，合并文件内所有以及选择集，挂点各自对齐链接到对应的目标骨骼并保存新文件覆盖到目标文件夹
 ----------------------------------------------------------------AutoExportTool_Pro.
 -- 版本信息 / 热更正式版本 AutoExportTool_Pro / 全局
-global g_currentVersion = "1.10"
+global g_currentVersion = "1.09"
 global g_latestVersion = g_currentVersion
 global g_updateAvailable = false 
 global g_githubRepo = "https://api.github.com/repos/ladyicefox/AutoExportTool-Releases/releases/latest"
@@ -2744,7 +2744,7 @@ rollout AutoExportTool_Pro "AutoExportTool_Pro" width:500 height:1050 -- width--
     -- 进度条控件 ---------------------------------------------------------
     dotNetControl pbProgress "System.Windows.Forms.ProgressBar" width:470 height:20 offset:[0,5]
 	label lblProgressInfo "♏准备就绪..." align:#center offset:[0,5] color:(color 200 100 0)
-    hyperLink lbl_01 "(•◡•)ꦿ๊🍁ღ͜ ོYQiu_🧰AutoExportToolo-V1.10؄♓╰☆╮" \
+    hyperLink lbl_01 "(•◡•)ꦿ๊🍁ღ͜ ོYQiu_🧰AutoExportToolo-V1.09؄♓╰☆╮" \
     align:#Center \
     offset:[10,0] \
     color:(color 323 178 223) \  -- 主色调 (赛博蓝)
