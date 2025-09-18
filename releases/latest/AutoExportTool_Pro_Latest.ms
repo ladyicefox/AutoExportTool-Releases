@@ -46,65 +46,93 @@ global g_updateAvailable = false
 global g_githubRepo = "https://api.github.com/repos/ladyicefox/AutoExportTool-Releases/releases/latest"
 global g_autoCheckUpdate = true
 
--- 版本检测函数 (增强版) / 热更 / 版本检测
-global checkForUpdates = fn checkForUpdates silent:false = (
-    try (
-        -- 方法1: 尝试 GitHub API
-        local apiUrl = "https://api.github.com/repos/ladyicefox/AutoExportTool-Releases/releases/latest"
-        local versionInfo = getGitHubVersionInfo apiUrl
-        
-        if versionInfo == undefined then (
-            -- 方法2: 回退到 versions.json
-            local fallbackUrl = "https://raw.githubusercontent.com/ladyicefox/AutoExportTool-Releases/main/versions.json"
-            versionInfo = getVersionInfoFromJson fallbackUrl
-        )
-        
-        if versionInfo != undefined do (
-            -- 比较版本并提示更新
-            processVersionInfo versionInfo silent:silent
-        )
-    )
-    catch (
-        if not silent do (
-            format "[版本检查错误] %\n" (getCurrentException())
-            messageBox "检查更新时发生错误，请检查网络连接。" title:"更新错误"
-        )
-    )
-)
-
 -- 从 GitHub API 获取版本信息 / 热更 / 版本检测
 global getGitHubVersionInfo = fn getGitHubVersionInfo apiUrl = (
     local webClient = dotNetObject "System.Net.WebClient"
-    webClient.Headers.Add("User-Agent" "AutoExportTool")
+    
+    -- 修正 Headers.Add 调用方式
+    try (
+        webClient.Headers.Add "User-Agent" "AutoExportTool"
+    )
+    catch (
+        -- 备用方法设置 User-Agent
+        try (
+            webClient.Headers.Set "User-Agent" "AutoExportTool"
+        )
+        catch (
+            format "[警告] 无法设置 User-Agent: %\n" (getCurrentException())
+        )
+    )
+    
     webClient.Encoding = (dotNetClass "System.Text.Encoding").UTF8
     
     try (
+        format "[DEBUG] 尝试访问GitHub API: %\n" apiUrl
         local jsonResponse = webClient.DownloadString(apiUrl)
+        format "[DEBUG] API响应接收成功，长度: %\n" jsonResponse.count
         
-        -- 解析 JSON 响应
-        local versionPattern = "\"tag_name\"\\s*:\\s*\"v([0-9.]+)\""
-        local versionMatch = (dotNetObject "System.Text.RegularExpressions.Regex").Match jsonResponse versionPattern
-        
-        if versionMatch.Success and versionMatch.Groups.Count > 1 then (
-            local latestVersion = versionMatch.Groups.Item[1].Value
+        -- 使用更健壮的JSON解析方法
+        local jsonObj = undefined
+        try (
+            -- 尝试使用.NET JSON解析器
+            local jsonSerializer = dotNetClass "System.Web.Script.Serialization.JavaScriptSerializer"
+            jsonObj = jsonSerializer.DeserializeObject jsonResponse
+        )
+        catch (
+            format "[DEBUG] .NET JSON解析失败，使用正则表达式回退\n"
+            -- 回退到正则表达式解析
+            local versionPattern = "\"tag_name\"\\s*:\\s*\"v?([0-9.]+)\""
+            local versionMatch = (dotNetObject "System.Text.RegularExpressions.Regex").Match jsonResponse versionPattern
             
-            -- 获取下载 URL
-            local urlPattern = "\"browser_download_url\"\\s*:\\s*\"([^\"]+?\\.ms)\""
-            local urlMatch = (dotNetObject "System.Text.RegularExpressions.Regex").Match jsonResponse urlPattern
-            
-            if urlMatch.Success and urlMatch.Groups.Count > 1 then (
-                local downloadUrl = urlMatch.Groups.Item[1].Value
+            if versionMatch.Success and versionMatch.Groups.Count > 1 then (
+                local latestVersion = versionMatch.Groups.Item[1].Value
                 
-                -- 获取更新日志
-                local changelog = ""
-                local bodyPattern = "\"body\"\\s*:\\s*\"([^\"]+)\""
-                local bodyMatch = (dotNetObject "System.Text.RegularExpressions.Regex").Match jsonResponse bodyPattern
-                if bodyMatch.Success and bodyMatch.Groups.Count > 1 then (
-                    changelog = bodyMatch.Groups.Item[1].Value
+                -- 获取下载URL
+                local urlPattern = "\"browser_download_url\"\\s*:\\s*\"([^\"]+?\\.ms)\""
+                local urlMatch = (dotNetObject "System.Text.RegularExpressions.Regex").Match jsonResponse urlPattern
+                
+                if urlMatch.Success and urlMatch.Groups.Count > 1 then (
+                    local downloadUrl = urlMatch.Groups.Item[1].Value
+                    
+                    -- 获取更新日志
+                    local changelog = ""
+                    local bodyPattern = "\"body\"\\s*:\\s*\"([^\"]+)\""
+                    local bodyMatch = (dotNetObject "System.Text.RegularExpressions.Regex").Match jsonResponse bodyPattern
+                    if bodyMatch.Success and bodyMatch.Groups.Count > 1 then (
+                        changelog = bodyMatch.Groups.Item[1].Value
+                    )
+                    
+                    return #(latestVersion, downloadUrl, changelog)
                 )
-                
-                return #(latestVersion, downloadUrl, changelog)
             )
+            return undefined
+        )
+        
+        -- 使用.NET JSON解析器成功
+        if jsonObj != undefined then (
+            local tagName = jsonObj["tag_name"]
+            local latestVersion = if (matchPattern tagName pattern:"v*") then (
+                substring tagName 2 -1  -- 移除"v"前缀
+            ) else (
+                tagName
+            )
+            
+            -- 查找资产下载URL
+            local assets = jsonObj["assets"]
+            local downloadUrl = ""
+            for i = 0 to (assets.Count - 1) do (
+                local asset = assets[i]
+                local name = asset["name"]
+                if (matchPattern name pattern:"*.ms") do (
+                    downloadUrl = asset["browser_download_url"]
+                    exit
+                )
+            )
+            
+            -- 获取更新日志
+            local changelog = jsonObj["body"]
+            
+            return #(latestVersion, downloadUrl, changelog)
         )
     )
     catch (
@@ -176,28 +204,31 @@ global processVersionInfo = fn processVersionInfo versionInfo silent:false = (
     
     g_latestVersion = latestVersion
     
-    -- 比较版本
-    local currentParts = filterString g_currentVersion "."
-    local latestParts = filterString latestVersion "."
-    
-    local updateAvailable = false
-    for i = 1 to (amax currentParts.count latestParts.count) do (
-        local currentPart = if i <= currentParts.count then (currentParts[i] as integer) else 0
-        local latestPart = if i <= latestParts.count then (latestParts[i] as integer) else 0
+    -- 更健壮的版本比较
+    fn compareVersions v1 v2 = (
+        local parts1 = filterString v1 "."
+        local parts2 = filterString v2 "."
         
-        if latestPart > currentPart do (
-            updateAvailable = true
-            exit
+        for i = 1 to (amax parts1.count parts2.count) do (
+            local part1 = if i <= parts1.count then (parts1[i] as integer) else 0
+            local part2 = if i <= parts2.count then (parts2[i] as integer) else 0
+            
+            if part2 > part1 do return true
+            if part2 < part1 do return false
         )
-        if latestPart < currentPart do exit
+        false
     )
     
-    g_updateAvailable = updateAvailable
+    g_updateAvailable = compareVersions g_currentVersion latestVersion
     
-    if updateAvailable and not silent do (
+    if g_updateAvailable and not silent do (
         local msg = "当前版本: v" + g_currentVersion + "\n最新版本: v" + latestVersion
         
         if changelog != "" and changelog != undefined do (
+            -- 处理转义字符
+            changelog = substituteString changelog "\\n" "\n"
+            changelog = substituteString changelog "\\r" "\r"
+            changelog = substituteString changelog "\\t" "\t"
             msg += "\n\n更新内容:\n" + changelog
         )
         
@@ -210,7 +241,7 @@ global processVersionInfo = fn processVersionInfo versionInfo silent:false = (
         )
     )
     
-    if not updateAvailable and not silent do (
+    if not g_updateAvailable and not silent do (
         messageBox "当前已经是最新版本。" title:"更新检查"
     )
 )
@@ -282,6 +313,80 @@ global downloadAndUpdate = fn downloadAndUpdate downloadUrl = (
     catch (
         format "[更新错误] %\n" (getCurrentException())
         messageBox "更新过程中发生错误: " + (getCurrentException()) title:"更新错误"
+    )
+)
+
+-- 版本检测函数 (增强版) / 热更 / 版本检测
+global checkForUpdates = fn checkForUpdates silent:false = (
+    try (
+        format "[版本检查] 开始检查更新...\n"
+        
+        -- 方法1: 尝试 GitHub API
+        local apiUrl = "https://api.github.com/repos/ladyicefox/AutoExportTool-Releases/releases/latest"
+        format "[版本检查] 尝试GitHub API: %\n" apiUrl
+        local versionInfo = getGitHubVersionInfo apiUrl
+        
+        if versionInfo == undefined then (
+            format "[版本检查] GitHub API失败，尝试回退方案\n"
+            -- 方法2: 回退到 versions.json
+            local fallbackUrl = "https://raw.githubusercontent.com/ladyicefox/AutoExportTool-Releases/master/versions.json"
+            format "[版本检查] 尝试versions.json: %\n" fallbackUrl
+            versionInfo = getVersionInfoFromJson fallbackUrl
+            
+            if versionInfo == undefined then (
+                -- 方法3: 尝试直接访问发布页面
+                format "[版本检查] versions.json失败，尝试直接访问发布页面\n"
+                local releasePageUrl = "https://github.com/ladyicefox/AutoExportTool-Releases/releases/latest"
+                try (
+                    local webClient = dotNetObject "System.Net.WebClient"
+                    
+                    -- 修正 Headers.Add 调用方式
+                    try (
+                        webClient.Headers.Add "User-Agent" "AutoExportTool"
+                    )
+                    catch (
+                        try (
+                            webClient.Headers.Set "User-Agent" "AutoExportTool"
+                        )
+                        catch (
+                            format "[警告] 无法设置 User-Agent: %\n" (getCurrentException())
+                        )
+                    )
+                    
+                    local htmlResponse = webClient.DownloadString(releasePageUrl)
+                    
+                    -- 从HTML中提取版本信息
+                    local versionPattern = "releases/tag/v?([0-9.]+)"
+                    local versionMatch = (dotNetObject "System.Text.RegularExpressions.Regex").Match htmlResponse versionPattern
+                    
+                    if versionMatch.Success and versionMatch.Groups.Count > 1 then (
+                        local latestVersion = versionMatch.Groups.Item[1].Value
+                        local downloadUrl = "https://github.com/ladyicefox/AutoExportTool-Releases/releases/download/v" + latestVersion + "/AutoExportTool_Pro_V" + latestVersion + ".ms"
+                        versionInfo = #(latestVersion, downloadUrl, "从发布页面获取的更新")
+                    )
+                )
+                catch (
+                    format "[版本检查] 发布页面访问失败: %\n" (getCurrentException())
+                )
+            )
+        )
+        
+        if versionInfo != undefined do (
+            format "[版本检查] 获取到版本信息: %\n" versionInfo
+            -- 比较版本并提示更新
+            processVersionInfo versionInfo silent:silent
+        )
+        
+        if versionInfo == undefined and not silent do (
+            format "[版本检查] 所有方法都失败了\n"
+            messageBox "无法检查更新，请检查网络连接或稍后重试。" title:"更新错误"
+        )
+    )
+    catch (
+        if not silent do (
+            format "[版本检查错误] %\n" (getCurrentException())
+            messageBox "检查更新时发生错误: " + (getCurrentException()) title:"更新错误"
+        )
     )
 )
 
