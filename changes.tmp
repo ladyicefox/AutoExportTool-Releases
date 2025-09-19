@@ -1,2 +1,7 @@
  M changes.tmp
- M versions.json
+ M releases/latest/AutoExportTool_Pro_Latest.ms
+ M releases/latest/version.txt
+ M releases/v1.09/AutoExportTool_Pro_V1.09.ms
+ M releases/v1.10/AutoExportTool_Pro_V1.10.ms
+?? AutoRelease.bat
+?? releases/vLatest/
