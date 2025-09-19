@@ -50,7 +50,7 @@ global g_autoCheckUpdate = false -- 默认关闭自动检查，避免启动卡�
 global getVersionInfoDirect = fn getVersionInfoDirect = (
     try (
         -- 直接从固定格式的 URL 获取最新版本
-        local latestVersion = "1.10" -- 硬编码最新版本号
+        local latestVersion = "1.09" -- 硬编码最新版本号
         
         -- 构建下载 URL
         local downloadUrl = "https://github.com/ladyicefox/AutoExportTool-Releases/releases/download/v" + 
@@ -11041,6 +11041,7 @@ on AutoExportTool_Pro open do (
     if g_autoCheckUpdate do (
         checkForUpdates silent:true
     )
+    
     -- 添加插件恢复检查
     try (
         if not doesFileExist g_pluginPath and doesFileExist g_backupPluginPath do (

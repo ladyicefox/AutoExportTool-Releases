@@ -40,7 +40,7 @@ FbxExporterSetParam "ResetExport"         -- 重置FBX导出设置
 -- 全局变量定义 / 批量合并列表的公共挂点文件 目标 到 列表的 所有文件和文件夹内的所有文件，合并文件内所有以及选择集，挂点各自对齐链接到对应的目标骨骼并保存新文件覆盖到目标文件夹
 ----------------------------------------------------------------AutoExportTool_Pro.
 -- 版本信息 / 热更正式版本 AutoExportTool_Pro / 全局
--- 版本信息 / 热更正式版本 AutoExportTool_Pro / 全局
+
 global g_currentVersion = "1.10"
 global g_latestVersion = g_currentVersion
 global g_updateAvailable = false 

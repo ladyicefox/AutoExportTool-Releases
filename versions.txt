@@ -1,0 +1,23 @@
+{
+  "latest_version": "1.10",
+  "versions": [
+    {
+      "version": "1.10",
+      "releaseDate": "2025-09-18",
+      "releaseNotes": "releases/v1.10/release_notes_v1.10.txt",
+      "downloadUrl": "https://github.com/ladyicefox/AutoExportTool-Releases/releases/download/v1.10/AutoExportTool_Pro_V1.10.ms"
+    },
+    {
+      "version": "1.09",
+      "releaseDate": "2025-09-15",
+      "releaseNotes": "releases/v1.09/release_notes_v1.09.txt",
+      "downloadUrl": "https://github.com/ladyicefox/AutoExportTool-Releases/releases/download/v1.09/AutoExportTool_Pro_V1.09.ms"
+    },
+    {
+      "version": "1.08",
+      "releaseDate": "2025-09-12",
+      "releaseNotes": "releases/v1.08/release_notes_v1.08.txt",
+      "downloadUrl": "https://github.com/ladyicefox/AutoExportTool-Releases/releases/download/v1.08/AutoExportTool_Pro_V1.08.ms"
+    }
+  ]
+}
